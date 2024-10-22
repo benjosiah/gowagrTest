@@ -1,5 +1,9 @@
-import {Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany} from 'typeorm';
+import {Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, OneToOne, JoinColumn} from 'typeorm';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import {Device} from "./device.entity";
+import {Otp} from "../../auth/otp.entity";
+import {AuthCredential} from "./auth-credentials.entity";
+import {Asset} from "./asset.entity";
 
 @Entity('users')
 export class User {
@@ -25,14 +29,19 @@ export class User {
     @IsString()
     username: string;
 
-    @Column()
-    @IsNotEmpty({ message: 'Password is required' })
-    @IsString()
-    password: string;
-
     @CreateDateColumn()
     createdAt: Date;
 
-    @OneToMany(() => Device, device => device.user) // Relation with Device
+    @OneToMany(() => Device, device => device.user, { cascade: true }) // Relation with Device
     devices: Device[];
+
+    @OneToMany(() => Otp, otp => otp.user, { cascade: true }) // Relation with Device
+    otps: Otp[];
+
+    @OneToMany(() => Asset, asset => asset.user) // Relation with Device
+    assets: Asset[];
+
+    @OneToOne(() => AuthCredential, (credential) => credential.user, { cascade: true })
+    @JoinColumn()
+    credential: AuthCredential;
 }
