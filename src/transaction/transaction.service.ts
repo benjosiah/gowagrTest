@@ -4,7 +4,7 @@ import {Repository} from "typeorm";
 import {User} from "../users/entities/users.entity";
 import {Asset} from "../users/entities/asset.entity";
 import {Ledger} from "./entity/ledger.entity";
-import {GetWalletTransactionsDto, TransactionsResponse, TransferDto} from "./transaction.model";
+import {GetWalletTransactionsDto, Transactions, TransactionsResponse, TransferDto} from "./transaction.model";
 import {Transaction} from "./entity/transaction.entity";
 
 @Injectable()
@@ -40,7 +40,7 @@ export class TransactionService {
         }
 
         // Check if the receiver has the specified asset type
-        let receiverAsset = await this.assetRepository.findOne({ where: { user: receiver, type: transferDto.type } });
+        let receiverAsset = await this.assetRepository.findOne({ where: { user: {username: transferDto.toUser}, type: transferDto.type } });
 
         // If the asset type doesn't exist for the receiver, create it
         if (!receiverAsset) {
@@ -77,7 +77,7 @@ export class TransactionService {
             reference: this.generateReference()
         });
 
-        // Save transactions
+
         await this.transactionRepository.save([debitTransaction, creditTransaction]);
 
 
@@ -95,27 +95,46 @@ export class TransactionService {
 
     async getAllWalletsTransactionHistory(
         filters: GetWalletTransactionsDto,
-        walletId?: string, // Add walletId as an optional parameter
+        user: User,
+        walletId?: string
     ): Promise<TransactionsResponse> {
-        const queryBuilder = this.ledgerRepository.createQueryBuilder('ledger');
+        const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
+            .leftJoinAndSelect('transaction.fromUser', 'sender')
+            .leftJoinAndSelect('transaction.toUser', 'receiver')
+            .leftJoinAndSelect('transaction.asset', 'asset');
 
         // Filters
         if (filters.type) {
-            queryBuilder.andWhere('ledger.type = :type', { type: filters.type });
+            queryBuilder.andWhere('transaction.transactionType = :type', { type: filters.type });
         }
 
         if (filters.startDate) {
-            queryBuilder.andWhere('ledger.date >= :startDate', { startDate: filters.startDate });
+            queryBuilder.andWhere('transaction.timeCompleted >= :startDate', { startDate: filters.startDate });
         }
 
         if (filters.endDate) {
-            queryBuilder.andWhere('ledger.date <= :endDate', { endDate: filters.endDate });
+            queryBuilder.andWhere('transaction.timeCompleted <= :endDate', { endDate: filters.endDate });
         }
 
         // Add filter for specific wallet if walletId is provided
         if (walletId) {
-            queryBuilder.andWhere('ledger.walletId = :walletId', { walletId });
+            queryBuilder.andWhere('transaction.assetId = :walletId', { walletId });
+        } else {
+
+            const userWallets = await this.assetRepository.find({
+                where: { user:{id: user.id}},
+                select: ['id'],
+            });
+
+            const walletIds = userWallets.map(wallet => wallet.id);
+
+            if (walletIds.length > 0) {
+                queryBuilder.andWhere('transaction.assetId IN (:...walletIds)', { walletIds });
+            }
         }
+
+        // Sort transactions by completedAt (newest first)
+        queryBuilder.orderBy('transaction.timeCompleted', 'DESC');
 
         const page = filters.page || 1;
         const limit = filters.limit || 10;
@@ -125,7 +144,22 @@ export class TransactionService {
             .take(limit)
             .getManyAndCount();
 
-        return { transactions, totalCount };
+        const result: Transactions[] = transactions.map(transaction => {
+            return {
+                id: transaction.id,
+                amount: transaction.amount,
+                date: transaction.timeCompleted,
+                type: transaction.transactionType,
+                wallet: transaction.asset,
+                sender: transaction.fromUser,
+                recipient: transaction.toUser
+            };
+        });
+
+        // return result;
+
+
+        return { result, totalCount };
 
     }
 

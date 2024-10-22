@@ -2,6 +2,9 @@
 import {IsNotEmpty, IsNumber, IsString, IsEnum, IsOptional, IsDateString, IsInt, Min} from 'class-validator';
 import { AssetType } from "../users/entities/asset.entity";
 import { ApiProperty } from '@nestjs/swagger';
+import {Type} from "class-transformer";
+import {Asset} from "@nestjs/cli/lib/configuration";
+import {UserDto, WalletDto} from "../users/dtos/users.dto";
 
 export class TransactionDto {
     @ApiProperty({ description: 'Transaction ID', example: 'txn_123456789' })
@@ -154,11 +157,11 @@ export class GetWalletTransactionsDto {
 
     @ApiProperty({
         description: 'Page number for pagination',
-        type: Number,
-        minimum: 1,
+        // minimum: 1,
         default: 1,
         required: false,
     })
+    @Type(() => Number)
     @IsOptional()
     @IsInt()
     @Min(1)
@@ -171,12 +174,24 @@ export class GetWalletTransactionsDto {
         default: 10,
         required: false,
     })
+    @Type(() => Number)
     @IsOptional()
     @IsInt()
     @Min(1)
     limit?: number = 10; // Default limit
 }
 export interface TransactionsResponse {
-    transactions: any[]; // You can replace `any` with a more specific type representing your transactions
+    result: Transactions[]; // You can replace `any` with a more specific type representing your transactions
     totalCount: number;
 }
+
+export class Transactions {
+    id: number;
+    amount: number;
+    date: Date;
+    type: "debit" | "credit";
+    wallet: WalletDto;
+    sender: UserDto;
+    recipient: UserDto;
+
+}[]

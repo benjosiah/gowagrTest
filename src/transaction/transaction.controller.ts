@@ -1,9 +1,10 @@
-import {Body, Controller, Get, Post, Query, Request, UseGuards, UsePipes, ValidationPipe} from '@nestjs/common';
+import {Body, Controller, Get, Param, Post, Query, Request, UseGuards, UsePipes, ValidationPipe} from '@nestjs/common';
 import {GetWalletTransactionsDto, TransferDto} from "./transaction.model";
 import {User} from "../users/entities/users.entity";
 import {TransactionService} from "./transaction.service";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {AuthUser} from "../users/user.decorator";
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -22,20 +23,13 @@ export class TransactionController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get(':id')
     @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Get user wallet transaction' })
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     @Get('history')
-    async getAllWalletsTransactionHistory(@Query() filters: GetWalletTransactionsDto) {
-        return this.transactionService.getAllWalletsTransactionHistory(filters);
+    async getAllWalletsTransactionHistory(@AuthUser() user: User, @Query() filters: GetWalletTransactionsDto) {
+        return this.transactionService.getAllWalletsTransactionHistory(filters, user);
     }
-
-    // @Get('history/:walletId')
-    // async getWalletTransactionHistory(@Param('walletId') walletId: string, @Query() filters: GetWalletTransactionsDto) {
-    //     return this.ledgerService.getWalletTransactionHistory(walletId, filters);
-    // }
-
 
 
 }

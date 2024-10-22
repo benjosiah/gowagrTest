@@ -58,6 +58,7 @@ export class UsersService {
             email: registeredUser.email,
             firstName: registeredUser.firstName,
             lastName: registeredUser.lastName,
+            deviceId: registeredUser.deviceId
         };
     }
 
