@@ -9,6 +9,7 @@ import {Asset} from "../users/entities/asset.entity";
 import {AuthCredential} from "../users/entities/auth-credentials.entity";
 import {Ledger} from "./entity/ledger.entity";
 import {Transaction} from "./entity/transaction.entity";
+// import {CacheService} from "../redis/redis.service";
 
 @Module({
   imports: [

@@ -135,6 +135,6 @@ export class AuthService {
 
     async generateJwt(user: User): Promise<string> {
         const payload = { sub: user.id, email: user.email };
-        return this.jwtService.sign(payload, { secret: "secret"});
+        return this.jwtService.sign(payload, { secret: this.configService.get<string>('JWT_SECRET')});
     }
 }

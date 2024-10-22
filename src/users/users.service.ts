@@ -13,6 +13,7 @@ import {SetPasswordDto} from "./dtos/set-password.dto";
 import {AuthCredential} from "./entities/auth-credentials.entity";
 import {Asset} from "./entities/asset.entity";
 
+
 @Injectable()
 export class UsersService {
 
@@ -156,7 +157,13 @@ export class UsersService {
     }
 
     async findUserWithBalanceById(id: string, authUser: User): Promise<UserDto> {
-        console.log(authUser)
+        // const cacheKey = `user_balance:${id}`;
+        // const cachedBalance = await this.cacheService.get<UserDto>(cacheKey);
+        //
+        // if (cachedBalance) {
+        //     return cachedBalance; // Return cached balance if available
+        // }
+
         if (id !== authUser.id) {
             throw new ForbiddenException('You do not have permission to access this user\'s information');
         }
@@ -166,7 +173,7 @@ export class UsersService {
             throw new NotFoundException('User not found');
         }
 
-        return {
+        const userDto: UserDto = {
             id: user.id,
             username: user.username,
             email: user.email,
@@ -175,9 +182,12 @@ export class UsersService {
             wallets: user.assets.map(wallet => ({
                 id: wallet.id,
                 balance: wallet.balance,
-                type: wallet.type, // Assuming you have assetType in your Wallet entity
+                type: wallet.type,
             })),
         };
 
+        // Cache the balance with a TTL of 1 hour
+        // await this.cacheService.set(cacheKey, userDto, 3600);
+        return userDto;
     }
 }

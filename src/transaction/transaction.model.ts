@@ -1,5 +1,5 @@
 // transaction.dto.ts
-import { IsNotEmpty, IsNumber, IsString, IsEnum, IsOptional } from 'class-validator';
+import {IsNotEmpty, IsNumber, IsString, IsEnum, IsOptional, IsDateString, IsInt, Min} from 'class-validator';
 import { AssetType } from "../users/entities/asset.entity";
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -105,4 +105,78 @@ export class LedgerDto {
     @ApiProperty({ description: 'Time of the ledger entry', example: '2024-01-01T00:00:00Z' })
     @IsNotEmpty()
     time: Date; // Time of the ledger entry
+}
+
+export enum TransactionType {
+    DEBIT = 'debit',
+    CREDIT = 'credit',
+}
+
+
+export class GetWalletTransactionsDto {
+    @ApiProperty({
+        description: 'Type of the transaction',
+        enum: TransactionType,
+        required: false,
+    })
+    @IsOptional()
+    @IsEnum(TransactionType)
+    type?: TransactionType;
+
+    @ApiProperty({
+        description: 'Start date for filtering transactions',
+        type: String,
+        format: 'date',
+        required: false,
+    })
+    @IsOptional()
+    @IsDateString()
+    startDate?: string;
+
+    @ApiProperty({
+        description: 'End date for filtering transactions',
+        type: String,
+        format: 'date',
+        required: false,
+    })
+    @IsOptional()
+    @IsDateString()
+    endDate?: string;
+
+    @ApiProperty({
+        description: 'ID of the wallet to get transactions for',
+        type: String,
+        required: false,
+    })
+    @IsOptional()
+    @IsString() // Added validation for string
+    walletId: string; // Assuming walletId is a string
+
+    @ApiProperty({
+        description: 'Page number for pagination',
+        type: Number,
+        minimum: 1,
+        default: 1,
+        required: false,
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    page?: number = 1; // Default to the first page
+
+    @ApiProperty({
+        description: 'Number of transactions per page',
+        type: Number,
+        minimum: 1,
+        default: 10,
+        required: false,
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    limit?: number = 10; // Default limit
+}
+export interface TransactionsResponse {
+    transactions: any[]; // You can replace `any` with a more specific type representing your transactions
+    totalCount: number;
 }

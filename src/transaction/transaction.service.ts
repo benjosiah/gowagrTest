@@ -1,14 +1,10 @@
-import {BadRequestException, Injectable, NotFoundException} from '@nestjs/common';
+import {BadRequestException, Injectable} from '@nestjs/common';
 import {InjectRepository} from "@nestjs/typeorm";
-import {RegisteredUser} from "../users/entities/registered_users.entity";
 import {Repository} from "typeorm";
 import {User} from "../users/entities/users.entity";
-import {Device} from "../users/entities/device.entity";
-import {AuthCredential} from "../users/entities/auth-credentials.entity";
 import {Asset} from "../users/entities/asset.entity";
-import {EmailService} from "../emails/emails.service";
 import {Ledger} from "./entity/ledger.entity";
-import {TransferDto} from "./transaction.model";
+import {GetWalletTransactionsDto, TransactionsResponse, TransferDto} from "./transaction.model";
 import {Transaction} from "./entity/transaction.entity";
 
 @Injectable()
@@ -90,24 +86,50 @@ export class TransactionService {
         receiverAsset.balance += transferDto.amount;
         await this.assetRepository.save([senderWallet, receiverAsset]);
 
+        const recieverCacheKey = `user_balance:${receiver.id}`;
+        const senderCacheKey = `user_balance:${authUser.id}`;
+        // await this.cacheService.del(recieverCacheKey);
+        // await this.cacheService.del(senderCacheKey);
         return debitTransaction;
     }
 
-    async getUserTransfers(walletId: string, page: number, limit: number, filter: string) {
-        const qb = this.transactionRepository.createQueryBuilder('transaction')
-            .where('transaction.walletId = :walletId', { walletId });
+    async getAllWalletsTransactionHistory(
+        filters: GetWalletTransactionsDto,
+        walletId?: string, // Add walletId as an optional parameter
+    ): Promise<TransactionsResponse> {
+        const queryBuilder = this.ledgerRepository.createQueryBuilder('ledger');
 
-        // Apply filters
-        if (filter) {
-            qb.andWhere('transaction.type = :type', { type: filter });
+        // Filters
+        if (filters.type) {
+            queryBuilder.andWhere('ledger.type = :type', { type: filters.type });
         }
 
-        return await qb
-            .orderBy('transaction.createdAt', 'DESC')
+        if (filters.startDate) {
+            queryBuilder.andWhere('ledger.date >= :startDate', { startDate: filters.startDate });
+        }
+
+        if (filters.endDate) {
+            queryBuilder.andWhere('ledger.date <= :endDate', { endDate: filters.endDate });
+        }
+
+        // Add filter for specific wallet if walletId is provided
+        if (walletId) {
+            queryBuilder.andWhere('ledger.walletId = :walletId', { walletId });
+        }
+
+        const page = filters.page || 1;
+        const limit = filters.limit || 10;
+
+        const [transactions, totalCount] = await queryBuilder
             .skip((page - 1) * limit)
             .take(limit)
-            .getMany();
+            .getManyAndCount();
+
+        return { transactions, totalCount };
+
     }
+
+
 
     private generateReference() {
         const timestamp = Date.now().toString(36); // Base-36 to shorten the timestamp

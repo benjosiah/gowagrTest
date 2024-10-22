@@ -16,22 +16,38 @@ import { TransactionModule } from './transaction/transaction.module';
 import {Asset} from "./users/entities/asset.entity";
 import {Ledger} from "./transaction/entity/ledger.entity";
 import {Transaction} from "./transaction/entity/transaction.entity";
+import {ConfigModule, ConfigService} from "@nestjs/config";
+import {RedisModule} from "@nestjs-modules/ioredis";
+import {EmailModule} from "./emails/email.module";
+const ENV = process.env.NODE_ENV;
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: '',
-      database: 'gowagr',
-      entities: [RegisteredUser, User, Device, Otp, AuthCredential, Asset, Transaction, Ledger],
-      synchronize: true,
+    ConfigModule.forRoot({
+      envFilePath: !ENV ? '.env' : `.env.${ENV}`,
+      isGlobal: true,
     }),
-      UsersModule,
-      AuthModule,
-      TransactionModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        return {
+          type: 'postgres',
+          host: configService.get('DB_HOST'),
+          port: +configService.get<number>('DB_PORT'),
+          username: configService.get('DB_USERNAME'),
+          password: configService.get('DB_PASSWORD'),
+          database: configService.get('DB_NAME'),
+          autoLoadEntities: true,
+          synchronize: true,
+          entities: [RegisteredUser, User, Device, Otp, AuthCredential, Asset, Transaction, Ledger],
+        };
+      },
+      inject: [ConfigService],
+    }),
+    EmailModule,
+    UsersModule,
+    AuthModule,
+    TransactionModule,
 
   ],
   controllers: [AppController],

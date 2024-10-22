@@ -8,6 +8,8 @@ import {EmailService} from "../emails/emails.service";
 import {Device} from "./entities/device.entity";
 import {Asset} from "./entities/asset.entity";
 import {AuthCredential} from "./entities/auth-credentials.entity";
+import {ConfigService} from "@nestjs/config";
+// import {CacheService} from "../redis/redis.service";
 
 @Module({
   imports: [
@@ -15,6 +17,6 @@ import {AuthCredential} from "./entities/auth-credentials.entity";
   ],
 
   controllers: [UsersController],
-  providers: [UsersService, EmailService]
+  providers: [UsersService, EmailService, ConfigService],
 })
 export class UsersModule {}
